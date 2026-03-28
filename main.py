@@ -21,8 +21,8 @@ app.add_middleware(
 )
 
 def get_db():
-    client = MongoClient(os.getenv("MONGO_URI"))
-    db = client[os.getenv("MONGO_DB_NAME", "parking")]
+    client = MongoClient(os.getenv("MONGO_URL"))
+    db = client.get_default_database()
     return client, db
 
 class Vehicle(BaseModel):
@@ -32,7 +32,7 @@ class Vehicle(BaseModel):
     plate: str
 
 class ExitVehicle(BaseModel):
-    id: str  # MongoDB uses string ObjectId
+    id: str 
 
 def serialize(doc):
     """Convert MongoDB document to JSON-serializable dict."""
