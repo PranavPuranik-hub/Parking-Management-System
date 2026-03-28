@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 import mysql.connector
 from datetime import datetime
@@ -44,12 +44,14 @@ def serve_frontend():
 
 @app.post("/park")
 def park_vehicle(v: Vehicle):
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
+    db = None
+    cursor = None
     try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM vehicles WHERE plate=%s", (v.plate,))
         if cursor.fetchone():
-            return {"error": "Vehicle already parked"}
+            return JSONResponse(status_code=400, content={"error": "Vehicle already parked"})
         time = datetime.now().strftime("%d-%m-%Y %I:%M %p")
         cursor.execute(
             "INSERT INTO vehicles (name, fee, icon, plate, time) VALUES (%s,%s,%s,%s,%s)",
@@ -63,20 +65,22 @@ def park_vehicle(v: Vehicle):
         db.commit()
         return {"message": "Vehicle parked", "id": vehicle_id}
     except Exception as e:
-        return {"error": str(e)}
+        return JSONResponse(status_code=500, content={"error": str(e)})
     finally:
-        cursor.close()
-        db.close()
+        if cursor: cursor.close()
+        if db: db.close()
 
 @app.post("/exit")
 def exit_vehicle(v: ExitVehicle):
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
+    db = None
+    cursor = None
     try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM vehicles WHERE id=%s", (v.id,))
         vehicle = cursor.fetchone()
         if not vehicle:
-            return {"error": "Vehicle not found"}
+            return JSONResponse(status_code=404, content={"error": "Vehicle not found"})
         time = datetime.now().strftime("%d-%m-%Y %I:%M %p")
         cursor.execute(
             "INSERT INTO logs (name, icon, plate, fee, time, type) VALUES (%s,%s,%s,%s,%s,%s)",
@@ -86,16 +90,18 @@ def exit_vehicle(v: ExitVehicle):
         db.commit()
         return {"message": "Vehicle exited"}
     except Exception as e:
-        return {"error": str(e)}
+        return JSONResponse(status_code=500, content={"error": str(e)})
     finally:
-        cursor.close()
-        db.close()
+        if cursor: cursor.close()
+        if db: db.close()
 
 @app.get("/data")
 def get_data():
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
+    db = None
+    cursor = None
     try:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM vehicles ORDER BY id DESC")
         vehicles = cursor.fetchall()
         cursor.execute("SELECT * FROM logs ORDER BY id DESC LIMIT 30")
@@ -106,22 +112,24 @@ def get_data():
         amount = result["total"] if result["total"] else 0
         return {"count": count, "amount": amount, "parked": vehicles, "log": logs}
     except Exception as e:
-        return {"error": str(e)}
+        return JSONResponse(status_code=500, content={"error": str(e)})
     finally:
-        cursor.close()
-        db.close()
+        if cursor: cursor.close()
+        if db: db.close()
 
 @app.post("/reset")
 def reset():
-    db = get_db()
-    cursor = db.cursor()
+    db = None
+    cursor = None
     try:
+        db = get_db()
+        cursor = db.cursor()
         cursor.execute("DELETE FROM vehicles")
         cursor.execute("DELETE FROM logs")
         db.commit()
         return {"message": "All data cleared"}
     except Exception as e:
-        return {"error": str(e)}
+        return JSONResponse(status_code=500, content={"error": str(e)})
     finally:
-        cursor.close()
-        db.close()
+        if cursor: cursor.close()
+        if db: db.close()
