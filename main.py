@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
-import mysql.connector
+from pymongo import MongoClient
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from bson import ObjectId
 import os
 
 load_dotenv()
@@ -20,13 +21,9 @@ app.add_middleware(
 )
 
 def get_db():
-    return mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME"),
-        port=int(os.getenv("DB_PORT", 3306))
-    )
+    client = MongoClient(os.getenv("MONGO_URI"))
+    db = client[os.getenv("MONGO_DB_NAME", "parking")]
+    return client, db
 
 class Vehicle(BaseModel):
     name: str
@@ -35,7 +32,15 @@ class Vehicle(BaseModel):
     plate: str
 
 class ExitVehicle(BaseModel):
-    id: int
+    id: str  # MongoDB uses string ObjectId
+
+def serialize(doc):
+    """Convert MongoDB document to JSON-serializable dict."""
+    if doc is None:
+        return None
+    doc["id"] = str(doc["_id"])
+    del doc["_id"]
+    return doc
 
 # Serve the frontend
 @app.get("/")
@@ -44,92 +49,111 @@ def serve_frontend():
 
 @app.post("/park")
 def park_vehicle(v: Vehicle):
-    db = None
-    cursor = None
+    client, db = None, None
     try:
-        db = get_db()
-        cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM vehicles WHERE plate=%s", (v.plate,))
-        if cursor.fetchone():
+        client, db = get_db()
+        vehicles = db["vehicles"]
+        logs = db["logs"]
+
+        # Check if vehicle already parked
+        if vehicles.find_one({"plate": v.plate}):
             return JSONResponse(status_code=400, content={"error": "Vehicle already parked"})
+
         time = datetime.now().strftime("%d-%m-%Y %I:%M %p")
-        cursor.execute(
-            "INSERT INTO vehicles (name, fee, icon, plate, time) VALUES (%s,%s,%s,%s,%s)",
-            (v.name, v.fee, v.icon, v.plate, time)
-        )
-        vehicle_id = cursor.lastrowid
-        cursor.execute(
-            "INSERT INTO logs (name, icon, plate, fee, time, type) VALUES (%s,%s,%s,%s,%s,%s)",
-            (v.name, v.icon, v.plate, v.fee, time, "in")
-        )
-        db.commit()
-        return {"message": "Vehicle parked", "id": vehicle_id}
+
+        # Insert vehicle
+        result = vehicles.insert_one({
+            "name": v.name,
+            "fee": v.fee,
+            "icon": v.icon,
+            "plate": v.plate,
+            "time": time
+        })
+
+        # Insert log
+        logs.insert_one({
+            "name": v.name,
+            "icon": v.icon,
+            "plate": v.plate,
+            "fee": v.fee,
+            "time": time,
+            "type": "in"
+        })
+
+        return {"message": "Vehicle parked", "id": str(result.inserted_id)}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
     finally:
-        if cursor: cursor.close()
-        if db: db.close()
+        if client: client.close()
 
 @app.post("/exit")
 def exit_vehicle(v: ExitVehicle):
-    db = None
-    cursor = None
+    client, db = None, None
     try:
-        db = get_db()
-        cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM vehicles WHERE id=%s", (v.id,))
-        vehicle = cursor.fetchone()
+        client, db = get_db()
+        vehicles = db["vehicles"]
+        logs = db["logs"]
+
+        vehicle = vehicles.find_one({"_id": ObjectId(v.id)})
         if not vehicle:
             return JSONResponse(status_code=404, content={"error": "Vehicle not found"})
+
         time = datetime.now().strftime("%d-%m-%Y %I:%M %p")
-        cursor.execute(
-            "INSERT INTO logs (name, icon, plate, fee, time, type) VALUES (%s,%s,%s,%s,%s,%s)",
-            (vehicle["name"], vehicle["icon"], vehicle["plate"], 0, time, "out")
-        )
-        cursor.execute("DELETE FROM vehicles WHERE id=%s", (v.id,))
-        db.commit()
+
+        # Insert exit log
+        logs.insert_one({
+            "name": vehicle["name"],
+            "icon": vehicle["icon"],
+            "plate": vehicle["plate"],
+            "fee": 0,
+            "time": time,
+            "type": "out"
+        })
+
+        # Remove vehicle
+        vehicles.delete_one({"_id": ObjectId(v.id)})
+
         return {"message": "Vehicle exited"}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
     finally:
-        if cursor: cursor.close()
-        if db: db.close()
+        if client: client.close()
 
 @app.get("/data")
 def get_data():
-    db = None
-    cursor = None
+    client, db = None, None
     try:
-        db = get_db()
-        cursor = db.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM vehicles ORDER BY id DESC")
-        vehicles = cursor.fetchall()
-        cursor.execute("SELECT * FROM logs ORDER BY id DESC LIMIT 30")
-        logs = cursor.fetchall()
-        count = len(vehicles)
-        cursor.execute("SELECT SUM(fee) AS total FROM logs WHERE type='in'")
-        result = cursor.fetchone()
-        amount = result["total"] if result["total"] else 0
-        return {"count": count, "amount": amount, "parked": vehicles, "log": logs}
+        client, db = get_db()
+        vehicles = db["vehicles"]
+        logs = db["logs"]
+
+        parked = [serialize(v) for v in vehicles.find().sort("_id", -1)]
+        log_list = [serialize(l) for l in logs.find().sort("_id", -1).limit(30)]
+
+        count = len(parked)
+
+        total_result = logs.aggregate([
+            {"$match": {"type": "in"}},
+            {"$group": {"_id": None, "total": {"$sum": "$fee"}}}
+        ])
+        total_list = list(total_result)
+        amount = total_list[0]["total"] if total_list else 0
+
+        return {"count": count, "amount": amount, "parked": parked, "log": log_list}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
     finally:
-        if cursor: cursor.close()
-        if db: db.close()
+        if client: client.close()
 
 @app.post("/reset")
 def reset():
-    db = None
-    cursor = None
+    client, db = None, None
     try:
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute("DELETE FROM vehicles")
-        cursor.execute("DELETE FROM logs")
-        db.commit()
+        client, db = get_db()
+        db["vehicles"].delete_many({})
+        db["logs"].delete_many({})
         return {"message": "All data cleared"}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
     finally:
-        if cursor: cursor.close()
-        if db: db.close()
+        if client: client.close()
