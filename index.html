@@ -863,7 +863,7 @@
     const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
     
-    fetch("http://localhost:8000/park", {
+    fetch("/park", {
   method: "POST",
   headers: {
     "Content-Type": "application/json"
@@ -948,7 +948,7 @@
     if (idx === -1) return;
 
     const v = parked[idx];
-    fetch("http://localhost:8000/exit", {
+    fetch("/exit", {
   method: "POST",
   headers: {
     "Content-Type": "application/json"
@@ -1002,7 +1002,7 @@
 
   
    function deleteRecords() {
-  fetch("http://localhost:8000/reset", {
+  fetch("/reset", {
     method: "POST"
   })
   .then(() => {
@@ -1028,7 +1028,7 @@
     toastTimer = setTimeout(() => { t.className = ''; }, 3000);
   }
   function loadData() {
-  fetch("http://localhost:8000/data")
+  fetch("/data")
     .then(res => res.json())
     .then(data => {
       count = data.count;

@@ -1,0 +1,21 @@
+CREATE DATABASE IF NOT EXISTS parking_db;
+USE parking_db;
+
+CREATE TABLE IF NOT EXISTS vehicles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    fee INT NOT NULL,
+    icon VARCHAR(10) NOT NULL,
+    plate VARCHAR(30) NOT NULL UNIQUE,
+    time VARCHAR(30) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    icon VARCHAR(10) NOT NULL,
+    plate VARCHAR(30) NOT NULL,
+    fee INT NOT NULL,
+    time VARCHAR(30) NOT NULL,
+    type ENUM('in', 'out') NOT NULL
+);
