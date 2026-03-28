@@ -22,7 +22,7 @@ app.add_middleware(
 
 def get_db():
     client = MongoClient(os.getenv("MONGO_URL"))
-    db = client.get_default_database()
+    db = client["parking"]
     return client, db
 
 class Vehicle(BaseModel):
