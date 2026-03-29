@@ -924,7 +924,7 @@
 
     list.innerHTML = filtered.map(v => `
       <div class="parked-item ${selectedExitId === v.id ? 'selected' : ''}"
-           onclick="selectExitVehicle(${v.id})">
+           onclick="selectExitVehicle('${v.id}')">
         <span class="pi-icon">${v.icon}</span>
         <div class="pi-info">
           <div class="pi-plate">${v.plate}</div>
@@ -968,9 +968,6 @@
   closeExitModal();
   showToast("Vehicle exited", "warn");
 });
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-    
   }
 
   // ── Log ──
