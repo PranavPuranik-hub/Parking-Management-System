@@ -1,43 +1,55 @@
-# 🅿️ The Great Parking Management System
+# 🚀 AI-Powered Parking Management System + Blog Generator
 
-A full-stack parking lot management dashboard built with a **FastAPI** backend, **MySQL** database, and a modern **HTML/CSS/JS** frontend. Manage vehicle entries, exits, revenue tracking, and activity logs — all in real time.
+A full-stack smart parking system built with **FastAPI**, **MongoDB**, and a modern **HTML/CSS/JS frontend**, now enhanced with an **AI-powered chatbot** that generates blog content for NGO/social activities.
 
 ---
 
-## 📸 Features
+## 🌟 Features
 
-- 🚗 **Multi-vehicle support** — Car, Auto Rickshaw, Bus, Truck, Motorcycle, Van
-- 🅿️ **25-slot capacity management** with live visual indicators
-- 💰 **Revenue tracking** — auto-calculated from entry fees
-- 📋 **Activity log** — last 30 entries and exits
-- 🔍 **Search & exit** — find parked vehicles by plate number
-- ⚠️ **Duplicate plate detection** — prevents double-parking
-- 🗑️ **Reset** — clear all records with one click
-- 📱 **Responsive UI** — works on desktop and mobile
+### 🅿️ Parking Management
+
+* 🚗 Multi-vehicle support (Car, Bus, Truck, etc.)
+* 🅿️ 25-slot live parking capacity tracking
+* 💰 Real-time revenue calculation
+* 📋 Activity logs (entry & exit history)
+* 🔍 Search parked vehicles by number
+* ⚠️ Duplicate vehicle detection
+* 🗑 Reset all records
+
+---
+
+### 🤖 AI Blog Generator (NEW 🔥)
+
+* 💬 Chatbot-based UI (like WhatsApp)
+* 🧠 Generates blogs from user input
+* ✍️ Creates NGO/event-based content automatically
+* ⚡ One-click blog creation
+* 🎯 Converts real-world activities into publish-ready content
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | HTML, CSS, Vanilla JavaScript |
-| Backend | Python, FastAPI |
-| Database | MySQL |
-| DB Driver | `mysql-connector-python` |
-| Config | `python-dotenv` |
+| Layer      | Technology            |
+| ---------- | --------------------- |
+| Frontend   | HTML, CSS, JavaScript |
+| Backend    | Python, FastAPI       |
+| Database   | MongoDB               |
+| AI         | OpenAI API            |
+| Deployment | Render / Vercel       |
 
 ---
 
 ## 📁 Project Structure
 
 ```
-parking-management/
+project/
 ├── index.html          # Frontend dashboard
+├── blog.html           # Blog page with AI chatbot
 ├── main.py             # FastAPI backend
-├── .env                # Environment variables (not committed)
-├── .env.example        # Sample env file
-├── requirements.txt    # Python dependencies
+├── requirements.txt
+├── render.yaml
+├── .env
 └── README.md
 ```
 
@@ -45,179 +57,162 @@ parking-management/
 
 ## ⚙️ Setup & Installation
 
-### Prerequisites
+### 1️⃣ Clone Repository
 
-- Python 3.8+
-- MySQL 8.0+
-- A modern web browser
+```bash
+git clone <your-repo-url>
+cd project
+```
 
 ---
 
-### 1. Clone the Repository
+### 2️⃣ Install Dependencies
 
 ```bash
-git clone https://github.com/PranavPuranik-hub/parking-management-system.git
-cd parking-management-system
-```
-
-### 2. Set Up the Virtual Environment
-
-```bash
-python -m venv venv
-source venv/bin/activate        # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment Variables
+---
 
-Create a `.env` file in the root directory:
+### 3️⃣ Setup Environment Variables
+
+Create `.env` file:
 
 ```env
-DB_HOST=localhost
-DB_USER=your_mysql_username
-DB_PASSWORD=your_mysql_password
-DB_NAME=parking_db
+MONGO_URL=your_mongodb_connection
+OPENAI_API_KEY=your_openai_key
 ```
 
-### 4. Set Up the MySQL Database
+---
 
-Log into MySQL and run:
-
-```sql
-CREATE DATABASE parking_db;
-USE parking_db;
-
-CREATE TABLE vehicles (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(50) NOT NULL,
-    fee INT NOT NULL,
-    icon VARCHAR(10) NOT NULL,
-    plate VARCHAR(30) NOT NULL UNIQUE,
-    time VARCHAR(30) NOT NULL
-);
-
-CREATE TABLE logs (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(50) NOT NULL,
-    icon VARCHAR(10) NOT NULL,
-    plate VARCHAR(30) NOT NULL,
-    fee INT NOT NULL,
-    time VARCHAR(30) NOT NULL,
-    type ENUM('in', 'out') NOT NULL
-);
-```
-
-### 5. Start the Backend Server
+### 4️⃣ Run Backend Server
 
 ```bash
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload
 ```
 
-The API will be available at `http://localhost:8000`.
+Server runs on:
+👉 http://localhost:8000
 
-### 6. Open the Frontend
+---
 
-Simply open `index.html` in your browser. No build step required.
+### 5️⃣ Open Frontend
 
-> **Note:** Make sure the backend is running before using the dashboard, as all data is fetched from the API.
+Open in browser:
+
+```bash
+index.html
+```
 
 ---
 
 ## 🔌 API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/data` | Fetch all parked vehicles, logs, count, and revenue |
-| `POST` | `/park` | Park a new vehicle |
-| `POST` | `/exit` | Remove a vehicle (exit) |
-| `POST` | `/reset` | Clear all records |
+### 🅿️ Parking APIs
 
-### Request / Response Examples
+| Method | Endpoint | Description      |
+| ------ | -------- | ---------------- |
+| GET    | `/data`  | Get parking data |
+| POST   | `/park`  | Add vehicle      |
+| POST   | `/exit`  | Remove vehicle   |
+| POST   | `/reset` | Clear data       |
 
-**POST `/park`**
-```json
-// Request
-{
-  "name": "Car",
-  "fee": 100,
-  "icon": "🚗",
-  "plate": "KA 01 AB 1234"
-}
+---
 
-// Response
-{
-  "message": "Vehicle parked",
-  "id": 7
-}
+### 🤖 AI Blog API (NEW)
+
+| Method | Endpoint         | Description            |
+| ------ | ---------------- | ---------------------- |
+| POST   | `/generate-blog` | Generate blog using AI |
+
+---
+
+## 🧠 How AI Chatbot Works
+
+1. User opens chatbot 💬
+2. Chatbot asks:
+
+   * Event name
+   * Date
+   * Location
+   * Details
+3. Data is sent to backend
+4. OpenAI generates blog
+5. Blog is displayed as UI card
+
+---
+
+## 💡 Example AI Output
+
 ```
+🌱 Tree Plantation Drive
 
-**POST `/exit`**
-```json
-// Request
-{ "id": 7 }
-
-// Response
-{ "message": "Vehicle exited" }
+On June 10, 2025, we organized a meaningful tree plantation drive...
 ```
 
 ---
 
-## 💸 Parking Fee Structure
+## 🚀 Deployment
 
-| Vehicle | Fee |
-|---------|-----|
-| 🏍️ Motorcycle | ₹50 |
-| 🛺 Auto Rickshaw | ₹75 |
-| 🚗 Car | ₹100 |
-| 🚐 Van | ₹150 |
-| 🚌 Bus | ₹200 |
-| 🚛 Truck | ₹250 |
+### Backend (Render)
+
+* Use `render.yaml` config 
+* Auto deploy from GitHub
+
+---
+
+### Frontend (Vercel)
+
+* Upload static files
+* Connect to backend API
 
 ---
 
 ## 📦 Requirements
 
-```txt
+From your project: 
+
+```
 fastapi
-uvicorn
-mysql-connector-python
+uvicorn[standard]
+pymongo
 python-dotenv
 pydantic
-```
-
-Install all at once:
-
-```bash
-pip install -r requirements.txt
 ```
 
 ---
 
 ## 🔒 Security Notes
 
-- Never commit your `.env` file. Add it to `.gitignore`.
-- CORS is currently set to `allow_origins=["*"]` for development. Restrict this in production.
-- Consider adding authentication before deploying publicly.
+* Do NOT expose API keys
+* Restrict CORS in production
+* Add authentication for admin features
 
 ---
 
-## 🚀 Deployment Tips
+## 🧠 Future Improvements
 
-- Use **Gunicorn** with Uvicorn workers for production:
-  ```bash
-  gunicorn main:app -k uvicorn.workers.UvicornWorker -w 4
-  ```
-- Serve the frontend via **Nginx** or any static file host.
-- Use a managed MySQL instance (e.g., AWS RDS, PlanetScale) in production.
+* 🎤 Voice-based chatbot
+* 🌐 Multi-language support
+* 🗄️ Blog database storage
+* 📊 Admin dashboard
+* 📸 Auto image generation
 
 ---
 
+## 🎯 Project Highlight (For Interview / KT)
 
-## 🙌 Contributing
+👉
+**“We developed a full-stack parking management system and enhanced it with an AI-powered chatbot that converts user input into structured blog content using LLM APIs.”**
 
-Pull requests are welcome! For major changes, please open an issue first to discuss what you'd like to change.
+---
 
-    finally:
-        cursor.close()
-        db.close()
-        
+## 🙌 Author
+
+Developed by **Rakshith K R**
+
+---
+
+## ⭐ If you like this project
+
+Give it a ⭐ on GitHub!
