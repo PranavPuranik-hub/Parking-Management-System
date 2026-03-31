@@ -1,4 +1,4 @@
-# 🚀 AI-Powered Parking Management System + Blog Generator
+# 🚀 Parking Management System
 
 A full-stack smart parking system built with **FastAPI**, **MongoDB**, and a modern **HTML/CSS/JS frontend**, now enhanced with an **AI-powered chatbot** that generates blog content for NGO/social activities.
 
