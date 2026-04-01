@@ -1,12 +1,13 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from pymongo import MongoClient
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from bson import ObjectId
 import os
+import re
 
 load_dotenv()
 
@@ -20,10 +21,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+PLATE_REGEX = re.compile(r'^[A-Z]{2}\s[0-9]{2}\s[A-Z]{1,3}\s[0-9]{4}$')
+
+
 def get_db():
     client = MongoClient(os.getenv("MONGO_URL"))
     db = client["parking"]
     return client, db
+
 
 class Vehicle(BaseModel):
     name: str
@@ -31,8 +36,18 @@ class Vehicle(BaseModel):
     icon: str
     plate: str
 
+    @field_validator('plate')
+    @classmethod
+    def validate_plate(cls, v):
+        val = v.strip().upper()
+        if not PLATE_REGEX.match(val):
+            raise ValueError('Plate must follow format like KA 40 EK 5158')
+        return val
+
+
 class ExitVehicle(BaseModel):
-    id: str 
+    id: str
+
 
 def serialize(doc):
     """Convert MongoDB document to JSON-serializable dict."""
@@ -42,10 +57,16 @@ def serialize(doc):
     del doc["_id"]
     return doc
 
-# Serve the frontend
+
+@app.get("/favicon.ico")
+def favicon():
+    return FileResponse("favicon.ico")
+
+
 @app.get("/")
 def serve_frontend():
     return FileResponse("index.html")
+
 
 @app.post("/park")
 def park_vehicle(v: Vehicle):
@@ -55,13 +76,11 @@ def park_vehicle(v: Vehicle):
         vehicles = db["vehicles"]
         logs = db["logs"]
 
-        # Check if vehicle already parked
         if vehicles.find_one({"plate": v.plate}):
             return JSONResponse(status_code=400, content={"error": "Vehicle already parked"})
 
         time = datetime.now().strftime("%d-%m-%Y %I:%M %p")
 
-        # Insert vehicle
         result = vehicles.insert_one({
             "name": v.name,
             "fee": v.fee,
@@ -70,7 +89,6 @@ def park_vehicle(v: Vehicle):
             "time": time
         })
 
-        # Insert log
         logs.insert_one({
             "name": v.name,
             "icon": v.icon,
@@ -81,10 +99,12 @@ def park_vehicle(v: Vehicle):
         })
 
         return {"message": "Vehicle parked", "id": str(result.inserted_id)}
+
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
     finally:
         if client: client.close()
+
 
 @app.post("/exit")
 def exit_vehicle(v: ExitVehicle):
@@ -100,7 +120,6 @@ def exit_vehicle(v: ExitVehicle):
 
         time = datetime.now().strftime("%d-%m-%Y %I:%M %p")
 
-        # Insert exit log
         logs.insert_one({
             "name": vehicle["name"],
             "icon": vehicle["icon"],
@@ -110,14 +129,15 @@ def exit_vehicle(v: ExitVehicle):
             "type": "out"
         })
 
-        # Remove vehicle
         vehicles.delete_one({"_id": ObjectId(v.id)})
 
         return {"message": "Vehicle exited"}
+
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
     finally:
         if client: client.close()
+
 
 @app.get("/data")
 def get_data():
@@ -140,10 +160,12 @@ def get_data():
         amount = total_list[0]["total"] if total_list else 0
 
         return {"count": count, "amount": amount, "parked": parked, "log": log_list}
+
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
     finally:
         if client: client.close()
+
 
 @app.post("/reset")
 def reset():
